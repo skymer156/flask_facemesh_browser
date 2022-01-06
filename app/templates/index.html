@@ -7,10 +7,93 @@
     <title>Flask Face mesh</title>
 </head>
 <body>
-    <h1>Flask Face Mesh</h1>
+    <h1>Flask Face Mesh {{info}}</h1>
+    <video id="camera" width= "600" height = "400"></video>
+    <canvas id="picture" width="600" height = "400"></canvas>
+    <form>
+        <button type="button" id="shutter">シャッター</button>
+    </form>
+
+    <form id ="frm">
+        <button type="button" id="btn-send">サーバーへ送信</button>
+    </form>
+
+    
+    <h2>処理画像</h2>
+    <ul id ="result"></ul>
+    
 </body>
 <script>
-    var stream;
-    
+    const PICTURE_ROUTE = "/picture"
+
+    window.onload = () => {
+        const video = document.querySelector("#camera");
+        const canvas = document.querySelector("#picture");
+
+    const constraints = {
+        audio: false,
+        video: {
+            width: 600,
+            height: 400,
+            facingMode: "user"
+        }
+    };
+
+    // カメラをvideoと同期
+    navigator.mediaDevices.getUserMedia(constraints)
+    .then((stream) => {
+        video.srcObject = stream;
+        video.onloadedmetadata = (e) => {
+            video.play();
+        };
+    })
+    .catch((err) => {
+        console.log(err.name + ": " + err.message)
+    });
+
+    // 静止画を取得
+    document.querySelector("#shutter").addEventListener("click", () => {
+        const ctx = canvas.getContext("2d")
+        video.pause();
+        setTimeout( () => {
+            video.play();
+        }, 500);
+
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    });
+
+    document.querySelector("#btn-send").addEventListener("click", () => {
+        const captureImage = canvas.toDataURL("image/png");
+
+        const param = {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json; charset=utf-8"
+            },
+            body: JSON.stringify({data: canvas})
+        };
+
+        sendServer(PICTURE_ROUTE,param)
+    });
+};
+
+function sendServer(url, param){
+    fetch(url, param)
+    .then((response) => {
+        return response.json();
+    })
+    .then((json) => {
+        if(json.status){
+            alert("送信成功");
+            setImage(json.result);
+        }else{
+            alert("送信失敗");
+            console.log("error ${json.result}");
+        }
+    }).catch((error) => {
+        alert("送信失敗");
+        console.log("error ${error}")
+    });
+}
 </script>
 </html>
